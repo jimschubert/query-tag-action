@@ -1,10 +1,10 @@
 # query-tag-action
 
-A GitHub Action allowing users to query tags via `git describe`.
+A GitHub Action allowing users to query tags via `git describe --tags`.
 
 This is useful, for example, if you want to generate a changelog from your last release tag to your newest. Rather than apply that logic to multiple changelog tools, this action will set an output parameter to the last found tag. You should then be able to use that parameter in any changelog utility you'd like.
 
-This action acts as a wrapper around [`git describe`](https://git-scm.com/docs/git-describe), performing an `unshallow` operation on the git repository by default.
+This action acts as a wrapper around [`git describe --tags`](https://git-scm.com/docs/git-describe), performing an `unshallow` operation on the git repository by default.
 
 The `actions/checkout@v2` action will check out a shallow repository. Although that action's [readme](https://github.com/actions/checkout) documents how to unshallow, many users will never read that readme. For those savvy users who are already performing an unshallow, you may skip that operation in this action by passing the input `skip-unshallow: "true"`.
 
