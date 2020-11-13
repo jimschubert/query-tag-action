@@ -1,28 +1,33 @@
-name: 'Query Tag'
-description: 'Queries for a git tag using git describe'
-author: 'Jim Schubert'
+name: "Query Tag"
+description: "Queries for a git tag using git describe"
+author: "Jim Schubert"
 inputs:
   include:
-    description: 'Glob pattern of tags to include'
+    description: "Glob pattern of tags to include"
     required: false
-    default: '*'
+    default: "*"
   exclude:
-    description:  'Glob pattern of tags to exclude'
+    description: "Glob pattern of tags to exclude"
     required: false
   commit-ish:
-    description: 'Commit-ish object names to describe'
+    description: "Commit-ish object names to describe"
     required: false
-    default: 'HEAD~'
+    default: "HEAD~"
   skip-unshallow:
     description: 'Skip the unshallow operation: "true" or "false"'
     required: false
-    default: 'false'
+    default: "false"
+  long:
+    description: "Return long format tag: <tagName>-<revisionsSinceTag>-<currentCommit>"
+    required: false
+    default: "false"
+
 outputs:
   tag:
-    description: 'The found tag'
+    description: "The found tag"
 runs:
-  using: 'node12'
-  main: 'main.js'
+  using: "node12"
+  main: "main.js"
 branding:
-  icon: 'hash'  
-  color: 'green'
+  icon: "hash"
+  color: "green"
