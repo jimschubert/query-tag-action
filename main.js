@@ -18,13 +18,13 @@ try {
   const include = getInput("include");
   const exclude = getInput("exclude");
   const commitIsh = getInput("commit-ish");
-  const long = getInput("long") === "true";
+  const abbrev = getInput("abbrev");
   const skipUnshallow = getInput("skip-unshallow") === "true";
 
   var includeOption = "";
   var excludeOption = "";
   var commitIshOption = "";
-  var abbrevOption = long ? "" : "--abbrev=0";
+  var abbrevOption = "";
 
   if (typeof include === "string" && include.length > 0) {
     includeOption = `--match '${include}'`;
@@ -41,6 +41,10 @@ try {
       );
     }
     commitIshOption = `'${commitIsh}'`;
+  }
+
+  if (abbrev !== false) {
+    abbrevOption = `--abbrev=${abbrev}`;
   }
 
   var unshallowCmd = skipUnshallow ? "" : "git fetch --prune --unshallow &&";

@@ -17,10 +17,10 @@ inputs:
     description: 'Skip the unshallow operation: "true" or "false"'
     required: false
     default: "false"
-  long:
-    description: "Return long format tag: <tagName>-<revisionsSinceTag>-<currentCommit>"
+  abbrev:
+    description: "value to pass to the --abbrev flag. false to disable, default 0"
     required: false
-    default: "false"
+    default: 0
 
 outputs:
   tag:
