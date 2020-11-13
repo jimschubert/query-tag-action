@@ -43,7 +43,7 @@ try {
     commitIshOption = `'${commitIsh}'`;
   }
 
-  if (abbrev !== false) {
+  if (abbrev !== "false") {
     abbrevOption = `--abbrev=${abbrev}`;
   }
 
