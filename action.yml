@@ -17,6 +17,10 @@ inputs:
     description: 'Skip the unshallow operation: "true" or "false"'
     required: false
     default: 'false'
+  abbrev:
+    description: 'value to pass the --abbrev flag. false to disable, default 0'
+    required: false
+    default: 0
 outputs:
   tag:
     description: 'The found tag'
@@ -24,5 +28,5 @@ runs:
   using: 'node12'
   main: 'main.js'
 branding:
-  icon: 'hash'  
+  icon: 'hash'
   color: 'green'
