@@ -1,4 +1,5 @@
 const { exec } = require('child_process');
+const fs = require('fs');
 
 // github actions pass inputs as environment variables prefixed with INPUT_ and uppercased
 function getInput(key) {
@@ -11,7 +12,14 @@ function getInput(key) {
 // rather than npm install @actions/core, output using the console logging syntax
 // see https://help.github.com/en/actions/reference/workflow-commands-for-github-actions#setting-an-output-parameter
 function setOutput(key, value) {
-    console.log(`::set-output name=${key}::${value}`)
+    var out = process.env['GITHUB_OUTPUT'];
+    if (out) {
+        console.log(`Appending to GITHUB_OUTPUT: ${key}=${value}`);
+        fs.appendFileSync(out, `${key}=${value}\n`, { encoding: "utf8", flag: "w" })
+    } else {
+        console.error('Unable to set output state. GITHUB_OUTPUT environment variable not found!');
+        process.exit(1);
+    }
 }
 
 try {

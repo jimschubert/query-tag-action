@@ -13,7 +13,7 @@
 # limitations under the License.
 
 name: Testing Tagged
-on: [push, release]
+on: [push, release, pull_request]
 
 jobs:
 
