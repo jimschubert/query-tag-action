@@ -13,7 +13,7 @@
 # limitations under the License.
 
 name: Testing Tagged
-on: [push, release]
+on: [push, release, pull_request]
 
 jobs:
 
@@ -22,7 +22,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Unshallow
       run: git fetch --prune --unshallow
     - name: Find Tag
@@ -50,7 +50,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Find Tag (commit-ish example)
       id: tagger
       uses: ./
