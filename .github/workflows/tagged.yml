@@ -22,7 +22,9 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     - name: Unshallow
       run: git fetch --prune --unshallow
     - name: Find Tag
@@ -50,7 +52,9 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     - name: Find Tag (commit-ish example)
       id: tagger
       uses: ./
