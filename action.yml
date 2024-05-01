@@ -25,7 +25,7 @@ outputs:
   tag:
     description: 'The found tag'
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'main.js'
 branding:
   icon: 'hash'
