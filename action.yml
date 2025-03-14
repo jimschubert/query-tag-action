@@ -1,4 +1,4 @@
-name: 'Query Tag'
+name: 'Query Git Tag'
 description: 'Queries for a git tag using git describe'
 author: 'Jim Schubert'
 inputs:
