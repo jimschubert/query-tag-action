@@ -21,6 +21,10 @@ inputs:
     description: 'value to pass the --abbrev flag. false to disable, default 0'
     required: false
     default: 0
+  exact-match:
+    description: 'Only output exact matches: "true" or "false"'
+    required: false
+    default: 'false'
 outputs:
   tag:
     description: 'The found tag'

@@ -28,6 +28,7 @@ try {
     const commitIsh = getInput('commit-ish');
     const skipUnshallow = getInput('skip-unshallow') === 'true';
     const abbrev = getInput("abbrev");
+    const exactMatch = getInput('exact-match') === 'true';
 
     var includeOption = '';
     var excludeOption = '';
@@ -54,9 +55,10 @@ try {
     }
 
     var unshallowCmd = skipUnshallow ? '' : 'git fetch --prune --unshallow &&'
+    var exactMatchOption = exactMatch ? '--exact-match' : ''
 
     // actions@checkout performs a shallow checkout. Need to unshallow for full tags access.
-    var cmd = `${unshallowCmd} git describe --tags ${abbrevOption} ${includeOption} ${excludeOption} ${commitIshOption}`.replace(/[ ]+/, ' ').trim();
+    var cmd = `${unshallowCmd} git describe --tags ${abbrevOption} ${includeOption} ${excludeOption} ${exactMatchOption} ${commitIshOption}`.replace(/[ ]+/, ' ').trim();
     console.log(`Executing: ${cmd}`);
 
     exec(cmd, (err, tag, stderr) => {
