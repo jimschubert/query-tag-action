@@ -1,0 +1,275 @@
+# Copyright 2025 Jim Schubert
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Manual tag + release workflow.
+#
+# Runs entirely from the GitHub UI/API (mobile-friendly) so a tag/release can be cut
+# without a local git checkout. If no explicit tag is provided, the next tag is
+# inferred from the latest existing tag (using this action, dogfooding itself) plus
+# the requested version bump. Before the tag is pushed, the action's behavior is
+# verified against the target commit. After the tag is pushed, the *published* tag
+# reference is exercised once more to confirm the release behaves as expected prior
+# to publishing the GitHub release.
+name: Tag and Release
+run-name: Release ${{ inputs.tag != '' && inputs.tag || format('(auto {0})', inputs.bump) }} from ${{ inputs.target != '' && inputs.target || 'default branch' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Commit-ish (branch, sha, tag) to tag. Defaults to the repository default branch.'
+        required: false
+        default: ''
+      tag:
+        description: 'Explicit tag to create (e.g. v2.3). Leave empty to infer the next tag.'
+        required: false
+        default: ''
+      bump:
+        description: 'When inferring a tag, which part of the version to increment'
+        required: false
+        type: choice
+        options:
+          - minor
+          - major
+          - patch
+        default: 'minor'
+      prerelease:
+        description: 'Mark the created GitHub release as a prerelease'
+        required: false
+        type: boolean
+        default: false
+      draft:
+        description: 'Create the GitHub release as a draft'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      previous_tag: ${{ steps.resolve.outputs.previous_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.target != '' && inputs.target || github.event.repository.default_branch }}
+
+      - name: Find latest tag
+        id: latest
+        uses: ./
+        with:
+          include: 'v*'
+          exclude: '*-rc*'
+          commit-ish: 'HEAD'
+          skip-unshallow: 'true'
+
+      - name: Resolve target tag
+        id: resolve
+        env:
+          EXPLICIT_TAG: ${{ inputs.tag }}
+          BUMP: ${{ inputs.bump }}
+          PREVIOUS_TAG: ${{ steps.latest.outputs.tag }}
+        run: |
+          set -e
+          echo "Previous tag: '${PREVIOUS_TAG}'"
+
+          if [ -n "${EXPLICIT_TAG}" ]; then
+            TAG="${EXPLICIT_TAG}"
+          elif [ -z "${PREVIOUS_TAG}" ]; then
+            TAG="v1.0"
+          else
+            if [[ ! "${PREVIOUS_TAG}" =~ ^v([0-9]+)(\.([0-9]+))?(\.([0-9]+))?(-rc[0-9]*)?$ ]]; then
+              echo "::error::Unable to parse previous tag '${PREVIOUS_TAG}' to infer next version. Please provide an explicit 'tag' input."
+              exit 1
+            fi
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[3]:-0}"
+            PATCH="${BASH_REMATCH[5]:-0}"
+            case "${BUMP}" in
+              major)
+                TAG="v$((MAJOR + 1)).0"
+                ;;
+              patch)
+                TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+                ;;
+              *)
+                TAG="v${MAJOR}.$((MINOR + 1))"
+                ;;
+            esac
+          fi
+
+          if ! [[ "${TAG}" =~ ^v[0-9]+(\.[0-9]+){0,2}(-rc[0-9]*)?$ ]]; then
+            echo "::error::Resolved tag '${TAG}' does not look like a valid version tag (expected vMAJOR[.MINOR[.PATCH]][-rcN])."
+            exit 1
+          fi
+
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "::error::Tag '${TAG}' already exists. Provide a different 'tag' input."
+            exit 1
+          fi
+
+          echo "Resolved tag: ${TAG}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "previous_tag=${PREVIOUS_TAG}" >> "$GITHUB_OUTPUT"
+
+  verify-source:
+    name: Verify action at target ref
+    needs: resolve
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.target != '' && inputs.target || github.event.repository.default_branch }}
+
+      - name: Find Tag
+        id: tagger
+        uses: ./
+        with:
+          include: 'v*'
+          exclude: '*-rc*'
+          commit-ish: 'HEAD~'
+          skip-unshallow: 'true'
+
+      - name: Find RC Tag
+        id: rcs
+        uses: ./
+        with:
+          include: '*-rc*'
+          skip-unshallow: 'true'
+
+      - name: Assert action produced output
+        env:
+          TAGGER_TAG: ${{ steps.tagger.outputs.tag }}
+          RCS_TAG: ${{ steps.rcs.outputs.tag }}
+        run: |
+          set -e
+          echo "Find Tag: '${TAGGER_TAG}'"
+          echo "Find RC Tag: '${RCS_TAG}'"
+          if [ -z "${TAGGER_TAG}" ]; then
+            echo "::error::Action produced no tag output at the target ref. Aborting release."
+            exit 1
+          fi
+
+  tag-and-push:
+    name: Tag and push ${{ needs.resolve.outputs.tag }}
+    needs: [resolve, verify-source]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.target != '' && inputs.target || github.event.repository.default_branch }}
+
+      - name: Git config
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create tag
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: git tag -a "${TAG}" -m "${TAG}"
+
+      - name: Push tag
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: git push origin "${TAG}"
+
+  verify-tag:
+    name: Verify published tag
+    needs: [resolve, tag-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      # `uses:` does not support the `needs` context, so the just-pushed tag can't be
+      # referenced as `jimschubert/query-tag-action@<tag>` directly here. Instead, check
+      # out the published tag alongside a consumer checkout and invoke it the same way
+      # the runner would (via INPUT_/GITHUB_OUTPUT env conventions), to prove the tag
+      # actually behaves as expected before it's released.
+      - name: Checkout consumer repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.target != '' && inputs.target || github.event.repository.default_branch }}
+          path: consumer
+
+      - name: Checkout published tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+          path: action-under-test
+
+      - name: Run published tag against consumer repo
+        id: published
+        working-directory: consumer
+        env:
+          # These INPUT_* names (including hyphens, e.g. INPUT_COMMIT-ISH) intentionally
+          # match the convention the Actions runner uses for `with:` inputs (main.js reads
+          # them via `process.env['INPUT_' + key.toUpperCase()]`), so this invocation is
+          # equivalent to a normal `uses: jimschubert/query-tag-action@<tag>` step.
+          INPUT_INCLUDE: 'v*'
+          INPUT_EXCLUDE: '*-rc*'
+          INPUT_COMMIT-ISH: 'HEAD~'
+          INPUT_SKIP-UNSHALLOW: 'true'
+          INPUT_ABBREV: '0'
+          GITHUB_OUTPUT: ${{ runner.temp }}/published_output.txt
+        run: node ../action-under-test/main.js
+
+      - name: Assert published tag behaves as expected
+        env:
+          NEW_TAG: ${{ needs.resolve.outputs.tag }}
+          OUTPUT_FILE: ${{ runner.temp }}/published_output.txt
+        run: |
+          set -e
+          TAG_VALUE=$(grep '^tag=' "$OUTPUT_FILE" | cut -d= -f2-)
+          echo "Published tag ${NEW_TAG} produced output: '${TAG_VALUE}'"
+          if [ -z "${TAG_VALUE}" ]; then
+            echo "::error::Published tag ${NEW_TAG} did not produce an expected output."
+            exit 1
+          fi
+
+  release:
+    name: Create GitHub release
+    needs: [resolve, verify-tag]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          DRAFT: ${{ inputs.draft }}
+        run: |
+          set -e
+          ARGS=(--title "${TAG}" --generate-notes)
+          if [ "${PRERELEASE}" = "true" ]; then
+            ARGS+=(--prerelease)
+          fi
+          if [ "${DRAFT}" = "true" ]; then
+            ARGS+=(--draft)
+          fi
+          gh release create "${TAG}" "${ARGS[@]}"

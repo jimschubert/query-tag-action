@@ -107,6 +107,15 @@ The above command is built by the following parts:
 
 Please see [tagged.yml](./.github/workflows/tagged.yml) for some use cases.
 
+## Releasing
+
+Maintainers can cut a tag and GitHub release without a local checkout by running the
+[Tag and Release](./.github/workflows/release.yml) workflow via `workflow_dispatch`
+(Actions tab, or `gh workflow run release.yml`). If no `tag` input is given, the next
+tag is inferred from the latest existing tag using this action itself. The workflow
+verifies the action's behavior both before tagging (against the target commit) and
+after pushing the tag (against the newly published tag) before creating the release.
+
 ## License
 
 This project is [licensed](./LICENSE) under Apache 2.0.
