@@ -61,6 +61,10 @@ try {
 
     exec(cmd, (err, tag, stderr) => {
         if (err) {
+            if (typeof stderr === 'string' && stderr.includes('No names found, cannot describe anything.')) {
+                console.log('No tags found for this repository. Outputting empty tag.');
+                return setOutput('tag', '');
+            }
             console.error(`Unable to find an earlier tag.\n${stderr}`);
             return process.exit(1);
         }
