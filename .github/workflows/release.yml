@@ -231,18 +231,16 @@ jobs:
           INPUT_COMMIT-ISH: 'HEAD~'
           INPUT_SKIP-UNSHALLOW: 'true'
           INPUT_ABBREV: '0'
-          GITHUB_OUTPUT: ${{ runner.temp }}/published_output.txt
         run: node ../action-under-test/main.js
 
       - name: Assert published tag behaves as expected
         env:
           NEW_TAG: ${{ needs.resolve.outputs.tag }}
-          OUTPUT_FILE: ${{ runner.temp }}/published_output.txt
+          PUBLISHED_TAG: ${{ steps.published.outputs.tag }}
         run: |
           set -e
-          TAG_VALUE=$(grep '^tag=' "$OUTPUT_FILE" | cut -d= -f2-)
-          echo "Published tag ${NEW_TAG} produced output: '${TAG_VALUE}'"
-          if [ -z "${TAG_VALUE}" ]; then
+          echo "Published tag ${NEW_TAG} produced output: '${PUBLISHED_TAG}'"
+          if [ -z "${PUBLISHED_TAG}" ]; then
             echo "::error::Published tag ${NEW_TAG} did not produce an expected output."
             exit 1
           fi
