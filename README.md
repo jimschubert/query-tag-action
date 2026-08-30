@@ -49,6 +49,8 @@ This option allows for users who have already performed an unshallow operation t
 
 The tag determined by your inputs.
 
+If the repository has no tags matching your inputs (for example, a newly created repository with no tags at all), `git describe` reports `fatal: No names found, cannot describe anything.`. This action treats that specific case as a benign "no tag found" result: the `tag` output is set to an empty string and the action exits successfully (exit code 0) rather than failing the step. Any other `git describe` error (for example, an invalid `commit-ish`) still fails the action.
+
 ## Example usage
 
 uses: jimschubert/query-tag-action@v1
